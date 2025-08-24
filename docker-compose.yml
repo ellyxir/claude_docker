@@ -1,0 +1,53 @@
+services:
+  claude-sandbox:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: claude-code-sandbox
+    
+    # Mount workspace directory and Claude Code config
+    volumes:
+      - ./workspace:/workspace
+      - ./claude-config:/root/.config/claude-code  # Persist auth & settings
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Optional: for Docker-in-Docker
+      
+    # Environment variables
+    environment:
+      - TERM=xterm-256color
+      - ENABLE_FIREWALL=false  # Set to true to enable network restrictions
+      
+    # Keep container running
+    stdin_open: true
+    tty: true
+    
+    # Security options for sandbox
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    
+    # Network isolation (optional)
+    networks:
+      - claude-net
+      
+    # Capabilities for full system access in sandbox
+    cap_add:
+      - ALL
+    
+    privileged: false # Set to true if needed for certain operations
+
+networks:
+  claude-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,8 @@
+.env
+workspace/
+claude-config/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store

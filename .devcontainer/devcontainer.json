@@ -1,0 +1,52 @@
+{
+  "name": "Claude Code Sandbox (NixOS)",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "claude-sandbox",
+  "workspaceFolder": "/workspace",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bbenoist.nix",
+        "jnoortheen.nix-ide",
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "rust-lang.rust-analyzer",
+        "golang.go",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "phoenixframework.phoenix",
+        "jakebecker.elixir-ls"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "files.watcherExclude": {
+          "**/target/**": true,
+          "**/node_modules/**": true,
+          "**/.git/**": true
+        }
+      }
+    }
+  },
+  
+  "features": {},
+  
+  "postCreateCommand": "echo 'DevContainer ready! Run: claude --dangerously-skip-permissions'",
+  
+  "remoteUser": "root",
+  
+  "mounts": [
+    "source=${localEnv:HOME}/.config/claude,target=/root/.config/claude,type=bind,consistency=cached"
+  ],
+  
+  "runArgs": [
+    "--cap-add=SYS_ADMIN",
+    "--security-opt", "apparmor:unconfined",
+    "--security-opt", "seccomp=unconfined"
+  ],
+  
+  "forwardPorts": [3000, 4000, 5000, 8000, 8080, 8888]
+}
