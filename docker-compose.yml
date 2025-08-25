@@ -8,13 +8,13 @@ services:
     # Mount workspace directory and Claude Code config
     volumes:
       - ./workspace:/workspace
-      - ./claude-config:/root/.config/claude-code  # Persist auth & settings
+      - ./claude-config:/home/developer/.config/claude-code  # Persist auth & settings for developer user
       - /var/run/docker.sock:/var/run/docker.sock:ro # Optional: for Docker-in-Docker
       
     # Environment variables
     environment:
       - TERM=xterm-256color
-      - ENABLE_FIREWALL=true  # Set to false to disable network restrictions
+      - ENABLE_FIREWALL=true  # Enable network restrictions for security
       
     # Keep container running
     stdin_open: true

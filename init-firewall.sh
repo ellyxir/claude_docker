@@ -20,8 +20,8 @@ iptables -t nat -F 2>/dev/null || true
 iptables -t nat -X 2>/dev/null || true
 ipset destroy allowed-domains 2>/dev/null || true
 
-# Create ipset for allowed domains
-ipset create allowed-domains hash:ip
+# Create ipset for allowed domains and networks  
+ipset create allowed-domains hash:net
 
 # Function to add domain to ipset
 add_domain() {
@@ -46,12 +46,17 @@ add_domain() {
     done
 }
 
-echo "Resolving and adding allowed domains..."
+echo "Adding allowed networks and domains..."
 
-# Critical domains
-add_domain "github.com"
-add_domain "api.github.com"
-add_domain "raw.githubusercontent.com"
+# GitHub IP ranges (from https://api.github.com/meta)
+# These are stable ranges that GitHub publishes
+ipset add allowed-domains 140.82.112.0/20 2>/dev/null || true
+ipset add allowed-domains 192.30.252.0/22 2>/dev/null || true  
+ipset add allowed-domains 185.199.108.0/22 2>/dev/null || true
+ipset add allowed-domains 143.55.64.0/20 2>/dev/null || true
+ipset add allowed-domains 140.82.121.0/24 2>/dev/null || true
+
+# Critical domains that need individual resolution
 add_domain "registry.npmjs.org"
 add_domain "cache.nixos.org"
 add_domain "channels.nixos.org"
@@ -81,6 +86,9 @@ iptables -A OUTPUT -p tcp --dport 80 -m set --match-set allowed-domains dst -j A
 
 # Allow local development
 iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 1:65535 -j ACCEPT
+
+# Log dropped packets for debugging (limit to avoid spam)
+iptables -A OUTPUT -m limit --limit 5/min -j LOG --log-prefix "FIREWALL_DROPPED: " --log-level 4
 
 # Default policies (set after rules are added)
 iptables -P INPUT DROP

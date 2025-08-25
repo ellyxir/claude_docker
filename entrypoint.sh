@@ -4,30 +4,24 @@ set -e
 
 echo "Starting Claude Code Sandbox..."
 
-# Fix DNS to use Google's DNS
+# Fix DNS to use Google's DNS (as root)
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
 echo "nameserver 8.8.4.4" >> /etc/resolv.conf
 
-# Create workspace directory if it doesn't exist
+# Create workspace directory and set ownership
 mkdir -p /workspace
+chown developer:developer /workspace
 
-# Start nix-shell with all packages first, then apply firewall
-cd /root
-
+# Apply firewall if enabled (as root)
 if [ "$ENABLE_FIREWALL" = "true" ]; then
-    # Run nix-shell but apply firewall after initialization
-    exec nix-shell --command "
-        echo 'Initializing environment...'
-        # Fix DNS again in case it got overwritten
-        echo 'nameserver 8.8.8.8' > /etc/resolv.conf
-        echo 'nameserver 8.8.4.4' >> /etc/resolv.conf
-        if [ -f /init-firewall.sh ]; then
-            echo 'Setting up network security...'
-            /init-firewall.sh
-        fi
-        cd /workspace
-        exec bash
-    "
-else
-    exec nix-shell --command "cd /workspace && bash"
+    echo "Setting up network security..."
+    /init-firewall.sh
+    echo "Firewall configured. Switching to non-root user..."
 fi
+
+# Ensure developer can read resolv.conf
+chmod 644 /etc/resolv.conf
+
+# Switch to developer user and run nix-shell
+# Set PATH directly since sourcing in su can be problematic
+exec su developer -s /bin/bash -c 'export PATH=/home/developer/.nix-profile/bin:$PATH && cd /home/developer && exec nix-shell --run bash'
