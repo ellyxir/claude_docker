@@ -14,7 +14,7 @@ services:
     # Environment variables
     environment:
       - TERM=xterm-256color
-      - ENABLE_FIREWALL=false  # Set to true to enable network restrictions
+      - ENABLE_FIREWALL=true  # Set to false to disable network restrictions
       
     # Keep container running
     stdin_open: true

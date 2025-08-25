@@ -1,4 +1,4 @@
-# Claude Code Nix Docker Sandbox (Simplified)
+# Claude Code Nix Docker Sandbox
 
 A Docker container using Nix package manager that provides a sandboxed environment for running Claude Code with the `--dangerously-skip-permissions` flag, giving it full system access within the isolated container.
 
@@ -8,8 +8,9 @@ A Docker container using Nix package manager that provides a sandboxed environme
 - **Isolated Environment**: Full system access within container, host system protected
 - **Pre-configured Development Tools**: Git, Node.js, Python, Rust, Go, Elixir, Deno, and more
 - **Persistent Workspace**: Mount your local workspace directory
-- **Claude Code Pre-installed**: From nixpkgs unstable channel
+- **Claude Code Pre-installed**: Version 1.0.80 from nixpkgs unstable channel
 - **Resource Limits**: Configurable CPU and memory constraints
+- **Network Firewall**: Optional network restrictions (allows GitHub, npm, pypi, etc., blocks other sites)
 
 ## Prerequisites
 
@@ -55,11 +56,13 @@ claude --dangerously-skip-permissions
 
 ```
 claude_docker/
-├── Dockerfile               # Minimal Docker setup with Nix
+├── Dockerfile               # Docker setup with Nix and base tools
 ├── home-shell.nix           # Nix shell configuration with all packages
 ├── docker-compose.yml       # Container orchestration
-├── entrypoint.sh            # Container initialization script
-├── init-firewall.sh         # Optional network security script
+├── entrypoint.sh            # Container initialization script  
+├── init-firewall.sh         # Network security script (ipset-based firewall)
+├── enter.sh                 # Quick entry script (optional)
+├── setup.sh                 # Initial setup helper (optional)
 ├── workspace/               # Mounted workspace directory (create this)
 └── claude-config/           # Claude Code auth persistence (auto-created)
 ```
@@ -75,11 +78,11 @@ The container includes all tools from your NixOS configuration:
 - **Media**: ffmpeg
 
 ### From Unstable Channel
-- **claude**: The Claude Code CLI
+- **claude**: Claude Code CLI v1.0.80
 - **code2prompt**: Code to prompt converter
 
 ### From Pinned Channel
-- **deno**: Version 2.35 specifically
+- **deno**: Version 2.3.5 specifically
 
 ## How It Works
 
@@ -115,12 +118,28 @@ buildInputs = (with stablePkgs; [
 ]) ++ ...
 ```
 
-### Enabling Network Firewall
+### Network Firewall
 
-Set in `docker-compose.yml`:
+The firewall is enabled by default (`ENABLE_FIREWALL=true` in `docker-compose.yml`). It restricts network access to only allowed domains:
+
+**Allowed domains:**
+- GitHub (github.com, api.github.com, raw.githubusercontent.com)
+- Package repositories (npmjs.org, pypi.org, cache.nixos.org)
+- Claude/Anthropic APIs (claude.ai, api.anthropic.com)
+
+**To disable firewall:**
 ```yaml
 environment:
-  - ENABLE_FIREWALL=true  # Restricts network access
+  - ENABLE_FIREWALL=false  # Allows all network access
+```
+
+**Testing firewall:**
+```bash
+# Inside container - should work:
+curl -I https://github.com
+
+# Should timeout/fail:
+curl -I https://cnn.com
 ```
 
 ## Managing the Container
@@ -163,7 +182,8 @@ First run downloads ~500MB of packages. Subsequent starts are much faster due to
 
 - Container runs with `--dangerously-skip-permissions` flag (full access within container)
 - Host system protected via Docker isolation
-- Optional firewall restricts network to package repos only
+- Network firewall (when enabled) restricts external access to approved domains only
+- DNS configured to use Google's DNS servers (8.8.8.8, 8.8.4.4)
 - Credentials stored securely in mounted volume
 
 ## VS Code DevContainer Support (Untested)

@@ -1,30 +1,69 @@
 #!/usr/bin/env bash
 
-# Network security script for Claude Code container
-# Based on Anthropic's devcontainer recommendations
+# Working network security script using ipset
+# Based on Anthropic's approach but simplified for our container
 
-set -e
+set -euo pipefail
 
-echo "Initializing network security..."
+echo "Initializing network security with ipset..."
 
-# Check if running as root (needed for iptables)
+# Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     echo "Note: Firewall rules require root. Skipping network restrictions."
     exit 0
 fi
 
 # Flush existing rules
-iptables -F
-iptables -X
-iptables -t nat -F
-iptables -t nat -X
+iptables -F 2>/dev/null || true
+iptables -X 2>/dev/null || true
+iptables -t nat -F 2>/dev/null || true
+iptables -t nat -X 2>/dev/null || true
+ipset destroy allowed-domains 2>/dev/null || true
 
-# Default policies: deny all
-iptables -P INPUT DROP
-iptables -P FORWARD DROP
-iptables -P OUTPUT DROP
+# Create ipset for allowed domains
+ipset create allowed-domains hash:ip
 
-# Allow loopback
+# Function to add domain to ipset
+add_domain() {
+    local domain=$1
+    echo "  Adding $domain..."
+    
+    # Use dig with external DNS to resolve domain
+    local ips=$(dig @8.8.8.8 +short "$domain" 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)
+    
+    if [ -z "$ips" ]; then
+        # Fallback to nslookup with external DNS if dig fails
+        ips=$(nslookup "$domain" 8.8.8.8 2>/dev/null | grep "Address:" | grep -v "#" | awk '{print $2}' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)
+    fi
+    
+    if [ -z "$ips" ]; then
+        echo "    Warning: Could not resolve $domain"
+        return
+    fi
+    
+    for ip in $ips; do
+        ipset add allowed-domains "$ip" 2>/dev/null || true
+    done
+}
+
+echo "Resolving and adding allowed domains..."
+
+# Critical domains
+add_domain "github.com"
+add_domain "api.github.com"
+add_domain "raw.githubusercontent.com"
+add_domain "registry.npmjs.org"
+add_domain "cache.nixos.org"
+add_domain "channels.nixos.org"
+add_domain "pypi.org"
+add_domain "files.pythonhosted.org"
+add_domain "api.anthropic.com"
+add_domain "claude.ai"
+
+# Set up iptables rules
+echo "Applying firewall rules..."
+
+# Allow loopback first
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
@@ -32,57 +71,25 @@ iptables -A OUTPUT -o lo -j ACCEPT
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# Allow DNS (needed for package installation)
+# Allow DNS
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 
-# Allow HTTPS for specific services (customize as needed)
-# GitHub
-iptables -A OUTPUT -p tcp -d github.com --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d api.github.com --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d raw.githubusercontent.com --dport 443 -j ACCEPT
+# Allow HTTPS to whitelisted IPs
+iptables -A OUTPUT -p tcp --dport 443 -m set --match-set allowed-domains dst -j ACCEPT
+iptables -A OUTPUT -p tcp --dport 80 -m set --match-set allowed-domains dst -j ACCEPT
 
-# NPM registry
-iptables -A OUTPUT -p tcp -d registry.npmjs.org --dport 443 -j ACCEPT
+# Allow local development
+iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 1:65535 -j ACCEPT
 
-# Python Package Index
-iptables -A OUTPUT -p tcp -d pypi.org --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d files.pythonhosted.org --dport 443 -j ACCEPT
+# Default policies (set after rules are added)
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
 
-# Rust crates
-iptables -A OUTPUT -p tcp -d crates.io --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d static.crates.io --dport 443 -j ACCEPT
-
-# Go modules
-iptables -A OUTPUT -p tcp -d proxy.golang.org --dport 443 -j ACCEPT
-
-# Elixir/Hex packages
-iptables -A OUTPUT -p tcp -d hex.pm --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d repo.hex.pm --dport 443 -j ACCEPT
-
-# Anthropic API
-iptables -A OUTPUT -p tcp -d api.anthropic.com --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d claude.ai --dport 443 -j ACCEPT
-
-# Nix/NixOS
-iptables -A OUTPUT -p tcp -d cache.nixos.org --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d channels.nixos.org --dport 443 -j ACCEPT
-
-# Allow HTTP/HTTPS to localhost (for local dev servers)
-iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 80 -j ACCEPT
-iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 443 -j ACCEPT
-iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 3000:9999 -j ACCEPT
-
-# Log dropped packets (optional, for debugging)
-# iptables -A OUTPUT -j LOG --log-prefix "DROPPED OUTPUT: "
-
-echo "Network security initialized. Only whitelisted connections allowed."
 echo ""
-echo "Allowed services:"
-echo "  - GitHub (github.com, api.github.com)"
-echo "  - Package registries: NPM, PyPI, Crates.io, Go modules, Hex"
-echo "  - Anthropic (api.anthropic.com, claude.ai)"
-echo "  - NixOS (cache.nixos.org, channels.nixos.org)"
-echo "  - Local development servers (localhost:3000-9999)"
+echo "Firewall configured successfully!"
+echo "Allowed $(ipset list allowed-domains | grep -c '^[0-9]' || echo 0) IP addresses"
 echo ""
-echo "To disable firewall, set ENABLE_FIREWALL=false in docker-compose.yml"
+echo "Test with: curl -I https://github.com (should work)"
+echo "Test with: curl -I https://cnn.com (should fail)"
