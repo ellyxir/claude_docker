@@ -38,8 +38,10 @@ docker-compose up --build -d
 4. **Enter the container**:
 ```bash
 docker-compose exec claude-sandbox bash
+# Then load the Nix shell environment:
+claude-shell
 ```
-This automatically enters a Nix shell with all packages available.
+This loads the Nix shell with all packages available including Claude.
 
 5. **Inside the container, authenticate Claude Code** (first time only):
 ```bash
@@ -61,6 +63,7 @@ claude_docker/
 ├── docker-compose.yml       # Container orchestration
 ├── entrypoint.sh            # Container initialization script  
 ├── init-firewall.sh         # Network security script (ipset-based firewall)
+├── claude-shell.sh          # Helper script to load Nix shell with Claude
 ├── enter.sh                 # Quick entry script (optional)
 ├── setup.sh                 # Initial setup helper (optional)
 ├── workspace/               # Mounted workspace directory (create this)

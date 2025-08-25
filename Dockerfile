@@ -12,8 +12,9 @@ COPY home-shell.nix /root/shell.nix
 # Copy scripts
 COPY entrypoint.sh /entrypoint.sh
 COPY init-firewall.sh /init-firewall.sh
+COPY claude-shell.sh /usr/local/bin/claude-shell
 
-RUN chmod +x /entrypoint.sh /init-firewall.sh
+RUN chmod +x /entrypoint.sh /init-firewall.sh /usr/local/bin/claude-shell
 
 # Create workspace directory
 WORKDIR /workspace

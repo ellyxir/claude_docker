@@ -26,7 +26,7 @@ if [ "$ENABLE_FIREWALL" = "true" ]; then
             /init-firewall.sh
         fi
         cd /workspace
-        bash
+        exec bash
     "
 else
     exec nix-shell --command "cd /workspace && bash"
