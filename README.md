@@ -62,7 +62,6 @@ claude_docker/
 ├── docker-compose.yml       # Container orchestration
 ├── entrypoint.sh            # Container initialization script  
 ├── init-firewall.sh         # Network security script (ipset-based firewall)
-├── claude-shell.sh          # Helper script to load Nix shell with Claude
 ├── enter.sh                 # Quick entry script for developer user
 ├── setup.sh                 # Initial setup helper
 ├── workspace/               # Mounted workspace directory (create this)
@@ -160,8 +159,7 @@ docker-compose up -d
 ./enter.sh
 
 # Or manually:
-docker-compose exec -u developer claude-sandbox bash
-claude-shell  # Load Nix environment
+docker-compose exec -u developer claude-sandbox bash -c 'cd /home/developer && exec nix-shell'
 
 # View logs
 docker-compose logs

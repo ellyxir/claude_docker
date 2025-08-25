@@ -49,9 +49,8 @@ COPY --chown=developer:developer home-shell.nix /home/developer/shell.nix
 # Copy scripts
 COPY entrypoint.sh /entrypoint.sh
 COPY init-firewall.sh /init-firewall.sh
-COPY claude-shell.sh /usr/local/bin/claude-shell
 
-RUN chmod +x /entrypoint.sh /init-firewall.sh /usr/local/bin/claude-shell
+RUN chmod +x /entrypoint.sh /init-firewall.sh
 
 # Create workspace directory
 RUN mkdir -p /workspace && chown developer:developer /workspace
