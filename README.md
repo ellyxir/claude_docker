@@ -63,7 +63,6 @@ claude_docker/
 ├── entrypoint.sh            # Container initialization script  
 ├── init-firewall.sh         # Network security script (ipset-based firewall)
 ├── enter.sh                 # Quick entry script for developer user
-├── setup.sh                 # Initial setup helper
 ├── workspace/               # Mounted workspace directory (create this)
 └── claude-config/           # Claude Code auth persistence (auto-created)
 ```
