@@ -63,8 +63,8 @@ claude_docker/
 ├── entrypoint.sh            # Container initialization script  
 ├── init-firewall.sh         # Network security script (ipset-based firewall)
 ├── enter.sh                 # Quick entry script for developer user
-├── workspace/               # Mounted workspace directory (create this)
-└── claude-config/           # Claude Code auth persistence (auto-created)
+├── workspace/               # Your project files (mounted to /workspace)
+└── claude-config/           # Claude settings & MCP config (mounted to /home/developer/.config/claude-code)
 ```
 
 ## Available Tools
@@ -94,6 +94,24 @@ The container includes all tools from your NixOS configuration:
 6. Subsequent runs use cached packages (much faster)
 
 ## Configuration
+
+### MCP (Model Context Protocol) Servers
+
+Claude can be extended with MCP servers for additional capabilities. Configure them in `claude-config/claude_desktop_config.json`. This file is mounted to `/home/developer/.config/claude-code/claude_desktop_config.json` in the container.
+
+Example with Linear integration:
+```json
+{
+  "mcpServers": {
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/sse"]
+    }
+  }
+}
+```
+
+See `claude-config/README.md` for more MCP server examples.
 
 ### Adjusting Resources
 

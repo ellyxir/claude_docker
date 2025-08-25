@@ -84,6 +84,9 @@ iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 443 -m set --match-set allowed-domains dst -j ACCEPT
 iptables -A OUTPUT -p tcp --dport 80 -m set --match-set allowed-domains dst -j ACCEPT
 
+# Allow SSH (port 22) to GitHub IPs for git operations
+iptables -A OUTPUT -p tcp --dport 22 -m set --match-set allowed-domains dst -j ACCEPT
+
 # Allow local development
 iptables -A OUTPUT -p tcp -d 127.0.0.1 --dport 1:65535 -j ACCEPT
 

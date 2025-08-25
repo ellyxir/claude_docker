@@ -15,6 +15,7 @@ in stablePkgs.mkShell {
     (with stablePkgs; [
       # Core utilities
       git
+      openssh  # SSH client for git clone/push/pull
       gh
       delta
       curl

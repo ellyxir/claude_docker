@@ -9,6 +9,7 @@ services:
     volumes:
       - ./workspace:/workspace
       - ./claude-config:/home/developer/.config/claude-code  # Persist auth & settings for developer user
+      - ~/.ssh:/home/developer/.ssh:ro  # SSH keys for git (read-only)
       - /var/run/docker.sock:/var/run/docker.sock:ro # Optional: for Docker-in-Docker
       
     # Environment variables
